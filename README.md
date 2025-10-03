@@ -39,7 +39,7 @@ Este sistema controla el riego de **tres zonas independientes** utilizando senso
 
 ---
 
-## Configuración por defecto (puedes modificar en el código)
+## Configuración por defecto
 
 - **Umbral de humedad:** 2500 (mayor = más seco)
 - **Zona 1:** riego a las 07:00, duración 15 min, cada 1 día
@@ -50,11 +50,11 @@ Este sistema controla el riego de **tres zonas independientes** utilizando senso
 
 ## ¿Cómo usar el sistema?
 
-1. **Configura tu WiFi y claves en el código:**  
-   Modifica los valores de `WIFI_SSID`, `WIFI_PASS`, `CLIMA_API_KEY`, `LATITUD` y `LONGITUD` según tu red y ubicación.
-2. **Conecta los sensores y bombas** a los pines indicados.
-3. **Carga el código** a tu ESP32-S3 desde Arduino IDE.
-4. **Abre el monitor serie** (baud rate: 115200) para ver el estado y controlar el sistema.
+1. **Configura WiFi y claves en el código:**  
+   Modificar los valores de `WIFI_SSID`, `WIFI_PASS`, `CLIMA_API_KEY`, `LATITUD` y `LONGITUD` según red y ubicación.
+2. **Conectar los sensores y bombas** a los pines indicados.
+3. **Cargar el código** a ESP32-S3 desde Arduino IDE.
+4. **Abrir el monitor serie** (baud rate: 115200) para ver el estado y controlar el sistema.
 
 ---
 
@@ -98,15 +98,6 @@ Zona 2 -> Humedad: 1800 | Necesita riego: NO | Bomba: APAGADA
 Zona 3 -> Humedad: 2700 | Necesita riego: SI | Bomba: APAGADA
 -------------------------------
 ```
-
----
-
-## Recomendaciones y mejoras posibles
-
-- Añadir una interfaz web o app móvil para control remoto.
-- Guardar logs de riego y humedad.
-- Agregar soporte para más zonas.
-- Mejorar la seguridad de las credenciales (no dejar claves en texto plano).
 
 ---
 
