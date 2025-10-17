@@ -20,19 +20,29 @@
 #define PIN_BOMBA_1 42        // Pin de la bomba de la zona 1
 #define PIN_BOMBA_2 41        // Pin de la bomba de la zona 2
 #define PIN_BOMBA_3 40        // Pin de la bomba de la zona 3
+
 #define HORA_RIEGO_1 7        // Hora de riego zona 1
 #define MINUTO_RIEGO_1 0      // Minuto de riego zona 1
 #define DURACION_RIEGO_1 900  // Duración de riego zona 1 (segundos)
 #define FRECUENCIA_RIEGO_1 1  // Frecuencia de riego zona 1 (cada n días)
+
 #define HORA_RIEGO_2 21       // Hora de riego zona 2
 #define MINUTO_RIEGO_2 0      // Minuto de riego zona 2
 #define DURACION_RIEGO_2 600  // Duración de riego zona 2 (segundos)
 #define FRECUENCIA_RIEGO_2 3  // Frecuencia de riego zona 2 (cada n días)
+
 #define HORA_RIEGO_3 0        // Hora de riego zona 3
 #define MINUTO_RIEGO_3 0      // Minuto de riego zona 3
 #define DURACION_RIEGO_3 0    // Duración de riego zona 3 (segundos)
 #define FRECUENCIA_RIEGO_3 0  // Frecuencia de riego zona 3 (cada n días)
-#define UMBRAL_HUMEDAD 2500   // Umbral de humedad para activar riego
+
+// Umbrales de humedad por zona (valores más altos = más seco)
+#define UMBRAL_MIN_ZONA_1 2000  // Umbral mínimo zona 1
+#define UMBRAL_MAX_ZONA_1 2800  // Umbral máximo zona 1
+#define UMBRAL_MIN_ZONA_2 1800  // Umbral mínimo zona 2
+#define UMBRAL_MAX_ZONA_2 2600  // Umbral máximo zona 2
+#define UMBRAL_MIN_ZONA_3 2000  // Umbral mínimo zona 3
+#define UMBRAL_MAX_ZONA_3 2700  // Umbral máximo zona 3
 
 const char* WIFI_SSID = "virus";
 const char* WIFI_PASS = "hellokitty12";
@@ -53,14 +63,23 @@ int manualSecond = 0;
 
 class Zona {
   /*
-    Clase Zone
     Representa una zona de riego con sensor y bomba.
-    Permite configurar horarios, duración, frecuencia y umbral de humedad.
+    Permite configurar horarios, duración, frecuencia y rango de humedad (min-max).
+
+    Atributos:
+      - pinSensor, pinBomba: Pines GPIO de hardware
+      - horaRiego, minutoRiego, duracionRiego: Configuración de horarios
+      - cadaNDias: Frecuencia de riego
+      - umbralMin, umbralMax: Rango de humedad óptima
+      - bombaEncendida: Estado actual de la bomba
+      
     Métodos:
-      - begin(): Inicializa pines.
-      - leerSensor(): Lee humedad.
-      - setBomba(): Controla bomba.
-      - estadoBomba(): Estado actual de la bomba.
+      - iniciar(): Inicializa pines GPIO
+      - leerSensor(): Lee valor del sensor de humedad
+      - establecerBomba(bool): Controla encendido/apagado de bomba
+      - estadoBomba(): Retorna estado actual de la bomba
+      - necesitaRiego(): Verifica si humedad > umbralMax (muy seco)
+      - humedadSuficiente(): Verifica si humedad < umbralMin (óptimo)
   */
   public:
   int pinSensor;
@@ -69,15 +88,18 @@ class Zona {
   int minutoRiego;
   int duracionRiego;
   int cadaNDias;
-  int umbralMax;
+  int umbralMin;  // Umbral mínimo de humedad (debajo de este valor está bien)
+  int umbralMax;  // Umbral máximo de humedad (encima de este valor está seco)
   bool bombaEncendida;
   unsigned long bombaDesdeMillis;
   long ultimoDiaRiego;
 
-  Zona(int s, int p, int h, int m, int d, int n, int uMax) {
+  Zona(int s, int p, int h, int m, int d, int n, int uMin, int uMax) {
+      // Constructor: Inicializa todos los parámetros de la zona
+      // Parámetros: sensor, bomba, hora, minuto, duración, frecuencia, umbralMin, umbralMax
       pinSensor = s; pinBomba = p;
       horaRiego = h; minutoRiego = m; duracionRiego = d; cadaNDias = n;
-      umbralMax = uMax;
+      umbralMin = uMin; umbralMax = uMax;
       bombaEncendida = false; bombaDesdeMillis = 0; ultimoDiaRiego = -1;
     }
 
@@ -109,11 +131,24 @@ class Zona {
   bool estadoBomba() {
       return bombaEncendida;
     }
+
+  bool necesitaRiego() {
+      // Verifica si la humedad está por encima del umbral máximo (muy seco)
+      int lectura = leerSensor();
+      return (lectura > umbralMax);
+    }
+
+  bool humedadSuficiente() {
+      // Verifica si la humedad está dentro del rango óptimo (menor al umbral mínimo)
+      int lectura = leerSensor();
+      return (lectura < umbralMin);
+    }
 };
 
-Zona zona1(PIN_SENSOR_1, PIN_BOMBA_1, HORA_RIEGO_1, MINUTO_RIEGO_1, DURACION_RIEGO_1, FRECUENCIA_RIEGO_1, UMBRAL_HUMEDAD);
-Zona zona2(PIN_SENSOR_2, PIN_BOMBA_2, HORA_RIEGO_2, MINUTO_RIEGO_2, DURACION_RIEGO_2, FRECUENCIA_RIEGO_2, UMBRAL_HUMEDAD);
-Zona zona3(PIN_SENSOR_3, PIN_BOMBA_3, HORA_RIEGO_3, MINUTO_RIEGO_3, DURACION_RIEGO_3, FRECUENCIA_RIEGO_3, UMBRAL_HUMEDAD);
+// Inicialización de las tres zonas con umbrales independientes
+Zona zona1(PIN_SENSOR_1, PIN_BOMBA_1, HORA_RIEGO_1, MINUTO_RIEGO_1, DURACION_RIEGO_1, FRECUENCIA_RIEGO_1, UMBRAL_MIN_ZONA_1, UMBRAL_MAX_ZONA_1);
+Zona zona2(PIN_SENSOR_2, PIN_BOMBA_2, HORA_RIEGO_2, MINUTO_RIEGO_2, DURACION_RIEGO_2, FRECUENCIA_RIEGO_2, UMBRAL_MIN_ZONA_2, UMBRAL_MAX_ZONA_2);
+Zona zona3(PIN_SENSOR_3, PIN_BOMBA_3, HORA_RIEGO_3, MINUTO_RIEGO_3, DURACION_RIEGO_3, FRECUENCIA_RIEGO_3, UMBRAL_MIN_ZONA_3, UMBRAL_MAX_ZONA_3);
 Zona* zonas[] = { &zona1, &zona2, &zona3 };
 
 bool suspenderRiegoHoy = false;
@@ -247,7 +282,6 @@ void actualizarClima() {
 
 void setup() {
   /*
-    setup()
     Inicializa la comunicación serie, WiFi, tiempo y zonas de riego.
     Muestra comandos disponibles en el monitor serie.
   */
@@ -269,7 +303,6 @@ void setup() {
 
 void loop() {
   /*
-    loop()
     Ciclo principal del sistema:
     - Procesa comandos por serial.
     - Actualiza clima y estado de riego.
@@ -321,8 +354,8 @@ void loop() {
       for (int i = 0; i < 3; i++) {
         Zona* z = zonas[i];
         int lectura = z->leerSensor();
-        bool necesitaRiego = (lectura > z->umbralMax);
-        Serial.printf("Zona %d -> Humedad: %d | ", i + 1, lectura);
+        bool necesitaRiego = z->necesitaRiego();
+        Serial.printf("Zona %d -> Humedad: %d | Rango: %d-%d | ", i + 1, lectura, z->umbralMin, z->umbralMax);
         Serial.printf("Necesita riego: %s | ", necesitaRiego ? "SI" : "NO");
         Serial.printf("Bomba: %s\n", z->estadoBomba() ? "ENCENDIDA" : "APAGADA");
       }
@@ -357,8 +390,8 @@ void loop() {
       for (int i = 0; i < 3; i++) {
         Zona* z = zonas[i];
         int lectura = z->leerSensor();
-        bool necesitaRiego = (lectura > z->umbralMax);
-        Serial.printf("Zona %d -> Humedad: %d | ", i + 1, lectura);
+        bool necesitaRiego = z->necesitaRiego();
+        Serial.printf("Zona %d -> Humedad: %d | Rango: %d-%d | ", i + 1, lectura, z->umbralMin, z->umbralMax);
         Serial.printf("Necesita riego: %s | ", necesitaRiego ? "SI" : "NO");
         Serial.printf("Bomba: %s\n", z->estadoBomba() ? "ENCENDIDA" : "APAGADA");
       }
@@ -372,9 +405,12 @@ void loop() {
         z->establecerBomba(bombaManual[i]);
         continue;
       }
+      
       int lectura = z->leerSensor();
-      bool necesitaRiego = (lectura > z->umbralMax);
+      bool necesitaRiego = z->necesitaRiego();  // Humedad > umbralMax (muy seco)
+      bool humedadSuficiente = z->humedadSuficiente();  // Humedad < umbralMin (óptimo)
       bool activarPorHorario = false;
+      
       // Verifica si corresponde activar por horario y frecuencia
       if (z->duracionRiego > 0 && z->cadaNDias > 0) {
         if (timeinfo.tm_hour == z->horaRiego && timeinfo.tm_min == z->minutoRiego) {
@@ -387,24 +423,37 @@ void loop() {
           }
         }
       }
+      
       // Si hay que suspender por clima, apaga la bomba
       if (suspenderRiegoHoy && !modoDemo && !modoManual) {
         z->establecerBomba(false);
-      } else if (activarPorHorario) {
-        z->establecerBomba(true);
-        z->bombaDesdeMillis = millis();
+      } 
+      // Si es hora de riego programado, verifica humedad antes de activar
+      else if (activarPorHorario) {
+        // Requerimiento 5: Ignorar riego programado si humedad está dentro del rango o muy alta
+        if (humedadSuficiente) {
+          Serial.printf("⏭️ ZONA %d: Riego programado ignorado (humedad suficiente: %d)\n", i + 1, lectura);
+          z->establecerBomba(false);
+        } else {
+          z->establecerBomba(true);
+          z->bombaDesdeMillis = millis();
+          Serial.printf("⏰ ZONA %d: Riego programado activado (humedad: %d)\n", i + 1, lectura);
+        }
       } 
       // Apaga la bomba si ya pasó la duración de riego programada
-      else if (z->bombaEncendida && activarPorHorario && (millis() - z->bombaDesdeMillis >= (unsigned long)z->duracionRiego * 1000UL)) {
+      else if (z->bombaEncendida && (millis() - z->bombaDesdeMillis >= (unsigned long)z->duracionRiego * 1000UL)) {
         z->establecerBomba(false);
       }
-      // Si la humedad lo requiere, enciende la bomba
+      // Requerimiento 4: Control automático por umbral de humedad
       else {
         if (necesitaRiego) {
+          // Humedad por debajo del mínimo, activar riego
           z->establecerBomba(true);
-        } else {
+        } else if (humedadSuficiente) {
+          // Humedad óptima, apagar riego
           z->establecerBomba(false);
         }
+        // Si está entre umbralMin y umbralMax, mantener estado actual
       }
     }
   }
